@@ -29,6 +29,14 @@ jobs:
         run: npm ci
       - name: Build static app
         run: npm run build
+      - name: Place static assets at the Pages root
+        shell: bash
+        run: |
+          repository_name="${GITHUB_REPOSITORY#*/}"
+          if [ -d "dist/client/${repository_name}/_next" ]; then
+            mv "dist/client/${repository_name}/_next" dist/client/_next
+            rmdir "dist/client/${repository_name}"
+          fi
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site
