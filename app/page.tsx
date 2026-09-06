@@ -14,7 +14,7 @@ import { categoryLabels, type AppSnapshot, type DocumentCategory, type DocumentR
 import {
   Bell, CalendarDays, Camera, CarFront, Check, ChevronRight,
   Copy, Download, ExternalLink, FileText, Gauge, HardDrive, Info,
-  Plus, Printer, ReceiptText, ScanLine, Search, Settings, ShieldCheck, Upload, Wrench, X,
+  Pencil, Plus, Printer, ReceiptText, ScanLine, Search, Settings, ShieldCheck, Upload, Wrench, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -25,7 +25,7 @@ type FormSubmitEvent = { preventDefault(): void; currentTarget: HTMLFormElement 
 type RestoreCandidate = { snapshot: AppSnapshot; exportedAt?: string; fileName: string };
 
 const emptySnapshot: AppSnapshot = { vehicles: [], documents: [], maintenanceRecords: [], resourceLinks: [] };
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 const resourceLinks = [
   { label: 'Virginia DMV registration', organization: 'Virginia DMV', url: 'https://www.dmv.virginia.gov/vehicles/registration' },
   { label: 'Virginia emissions information', organization: 'Virginia DEQ', url: 'https://www.deq.virginia.gov/air-energy/vehicle-emissions-air-check' },
@@ -104,6 +104,7 @@ export default function Home() {
   const [backupFolder, setBackupFolder] = useState<BackupFolderStatus | null>(null);
   const [restoreCandidate, setRestoreCandidate] = useState<RestoreCandidate | null>(null);
   const [vinVehicle, setVinVehicle] = useState<Vehicle | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
   const refresh = async () => {
     const next = await loadSnapshot();
@@ -225,7 +226,7 @@ export default function Home() {
 
       <section className="page" id="top">
         {view === 'today' && <TodayView snapshot={snapshot} activeVehicle={activeVehicle} activeVehicleId={activeVehicleId} setActiveVehicleId={setActiveVehicleId} deadlines={deadlines} openViewer={openViewer} setAddMode={setAddMode} onExport={() => createRecordsExport(snapshot, notify)} onPrint={() => setPrintPreview(true)} backupFolder={backupFolder} onOpenStorage={() => setView('settings')} />}
-        {view === 'vehicles' && <VehiclesView snapshot={snapshot} activeVehicle={activeVehicle} setActiveVehicleId={setActiveVehicleId} activeDocs={activeDocs} maintenance={activeMaintenance} openViewer={openViewer} setAddMode={setAddMode} notify={notify} onAddLink={() => setLinkDialog(true)} onVinLookup={() => setVinVehicle(activeVehicle || null)} />}
+        {view === 'vehicles' && <VehiclesView snapshot={snapshot} activeVehicle={activeVehicle} setActiveVehicleId={setActiveVehicleId} activeDocs={activeDocs} maintenance={activeMaintenance} openViewer={openViewer} setAddMode={setAddMode} notify={notify} onAddLink={() => setLinkDialog(true)} onVinLookup={() => setVinVehicle(activeVehicle || null)} onEditVehicle={() => setEditingVehicle(activeVehicle || null)} />}
         {view === 'records' && <RecordsView records={visibleRecords} vehicles={snapshot.vehicles} search={search} setSearch={setSearch} openViewer={openViewer} setAddMode={setAddMode} />}
         {view === 'settings' && <SettingsView snapshot={snapshot} notify={notify} onPrint={() => setPrintPreview(true)} onImport={prepareRestore} backupFolder={backupFolder} onChooseFolder={configureBackupFolder} onReset={async () => { await clearGarage(); setSnapshot(emptySnapshot); setActiveVehicleId(''); setView('today'); }} />}
       </section>
@@ -235,6 +236,7 @@ export default function Home() {
       <DocumentViewer record={viewer} vehicle={snapshot.vehicles.find((item) => item.id === viewer?.vehicleId)} imageUrl={viewerImage} onClose={() => { setViewer(null); setViewerImage(null); }} notify={notify} />
       <PrintPreview open={printPreview} snapshot={snapshot} onClose={() => setPrintPreview(false)} />
       {linkDialog && <LinkDialog onClose={() => setLinkDialog(false)} onSaved={async () => { await refreshAndSync(); setLinkDialog(false); notify('Website saved'); }} />}
+      {editingVehicle && <EditVehicleDialog vehicle={editingVehicle} onClose={() => setEditingVehicle(null)} onSaved={async () => { await refreshAndSync(); setEditingVehicle(null); notify('Vehicle details updated'); }} />}
       <RestoreBackupDialog candidate={restoreCandidate} onClose={() => setRestoreCandidate(null)} onRestore={async () => { if (!restoreCandidate) return; await replaceAll(restoreCandidate.snapshot); await refreshAndSync(); setActiveVehicleId(restoreCandidate.snapshot.vehicles[0]?.id || ''); setRestoreCandidate(null); setView('today'); notify('Backup restored'); }} />
       {vinVehicle && <VinLookupDialog vehicle={vinVehicle} onClose={() => setVinVehicle(null)} onSaved={async () => { await refreshAndSync(); setVinVehicle(null); notify('VIN details and recall check saved'); }} />}
       {toast && <output className="toast" key={toast.key}><Check size={18} />{toast.message}</output>}
@@ -312,8 +314,8 @@ function DeadlineCard({ record, vehicle, onClick }: { record: DocumentRecord; ve
   return <button className="timeline-card" onClick={onClick}><span className="date-tile"><strong>{date ? date.getDate() : '—'}</strong><small>{date ? date.toLocaleString('en-US', { month: 'short' }).toUpperCase() : 'DATE'}</small></span><span className="timeline-copy"><strong>{categoryLabels[record.category]}</strong><small>{vehicle?.nickname} · {record.title}</small></span><span className={`status-badge ${status.tone}`}>{status.label}</span><ChevronRight size={19} /></button>;
 }
 
-function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs, maintenance, openViewer, setAddMode, notify, onAddLink, onVinLookup }: {
-  snapshot: AppSnapshot; activeVehicle?: Vehicle; setActiveVehicleId: (id: string) => void; activeDocs: DocumentRecord[]; maintenance: AppSnapshot['maintenanceRecords']; openViewer: (record: DocumentRecord) => void; setAddMode: (mode: AddMode) => void; notify: (message: string) => void; onAddLink: () => void; onVinLookup: () => void;
+function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs, maintenance, openViewer, setAddMode, notify, onAddLink, onVinLookup, onEditVehicle }: {
+  snapshot: AppSnapshot; activeVehicle?: Vehicle; setActiveVehicleId: (id: string) => void; activeDocs: DocumentRecord[]; maintenance: AppSnapshot['maintenanceRecords']; openViewer: (record: DocumentRecord) => void; setAddMode: (mode: AddMode) => void; notify: (message: string) => void; onAddLink: () => void; onVinLookup: () => void; onEditVehicle: () => void;
 }) {
   if (!activeVehicle) return null;
   const insurance = activeDocs.filter((record) => record.category === 'insurance').sort((a, b) => b.issueDate.localeCompare(a.issueDate))[0];
@@ -324,7 +326,7 @@ function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs,
     <PageHeader eyebrow="Your garage" title="Vehicles" action={<button className="scan-button" onClick={() => setAddMode('vehicle')}><Plus />Add vehicle</button>} />
     <VehicleSwitcher vehicles={snapshot.vehicles} activeId={activeVehicle.id} setActiveId={setActiveVehicleId} onAdd={() => setAddMode('vehicle')} />
     <section className="vehicle-identity"><div className="vehicle-hero-icon"><CarFront /></div><div><p className="eyebrow">{activeVehicle.nickname}</p><h2>{activeVehicle.year} {activeVehicle.make} {activeVehicle.model}</h2><p>{activeVehicle.trim || 'Trim not recorded'} · {activeVehicle.currentOdometer?.toLocaleString() || 'Mileage needed'} miles</p></div><button className="vin-identity-button" onClick={onVinLookup} disabled={!activeVehicle.vin}><ShieldCheck />{activeVehicle.vinLookup ? 'Review VIN check' : 'Check VIN'}</button></section>
-    <section className="detail-section"><div className="section-heading"><div><p className="eyebrow">At a glance</p><h2>Quick facts</h2></div>{activeVehicle.vin && <button className="text-button" onClick={onVinLookup}>{activeVehicle.vinLookup ? 'Checked with NHTSA' : 'Check VIN & recalls'}<ChevronRight /></button>}</div><div className="facts-grid">
+    <section className="detail-section"><div className="section-heading"><div><p className="eyebrow">At a glance</p><h2>Quick facts</h2></div><div className="quick-fact-actions"><button className="text-button" onClick={onEditVehicle}>Edit vehicle<Pencil /></button>{activeVehicle.vin && <button className="text-button" onClick={onVinLookup}>{activeVehicle.vinLookup ? 'Checked with NHTSA' : 'Check VIN & recalls'}<ChevronRight /></button>}</div></div><div className="facts-grid">
       <Fact label="VIN" value={activeVehicle.vin || 'Not recorded'} action={activeVehicle.vin ? () => copy(activeVehicle.vin!, 'VIN') : undefined} />
       <Fact label="License plate" value={activeVehicle.licensePlate || 'Not recorded'} action={activeVehicle.licensePlate ? () => copy(activeVehicle.licensePlate!, 'Plate') : undefined} />
       <Fact label="Registration" value={registration ? niceDate(registration.expirationDate) : 'Not added'} />
@@ -462,6 +464,28 @@ function VehicleForm({ onSaved }: { onSaved: () => Promise<void> }) {
     {error && <p className="form-error" role="alert">{error}</p>}
     <footer className="wizard-actions">{step > 0 ? <button className="wizard-back" onClick={() => { setError(''); setStep((current) => current - 1); }}>Back</button> : <span />}{step < 3 ? <button className="wizard-next" onClick={next}>Continue<ChevronRight /></button> : <button className="wizard-next" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save vehicle'}<Check /></button>}</footer>
   </div>;
+}
+
+function EditVehicleDialog({ vehicle, onClose, onSaved }: { vehicle: Vehicle; onClose: () => void; onSaved: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [values, setValues] = useState({ nickname: vehicle.nickname, year: String(vehicle.year), make: vehicle.make, model: vehicle.model, trim: vehicle.trim || '', vin: vehicle.vin || '', plate: vehicle.licensePlate || '', mileage: vehicle.currentOdometer?.toString() || '' });
+  const update = (field: keyof typeof values, value: string) => setValues((current) => ({ ...current, [field]: value }));
+  const save = async (event: FormSubmitEvent) => {
+    event.preventDefault();
+    if (!values.year || !values.make.trim() || !values.model.trim()) { setError('Year, make, and model are required.'); return; }
+    const vin = values.vin.trim().toUpperCase();
+    const vinChanged = vin !== (vehicle.vin || '').trim().toUpperCase();
+    const mileage = values.mileage.trim() ? Number(values.mileage) : undefined;
+    if (mileage !== undefined && (!Number.isFinite(mileage) || mileage < 0)) { setError('Mileage must be a positive number or left blank.'); return; }
+    setBusy(true); setError('');
+    try {
+      await saveVehicle({ ...vehicle, nickname: values.nickname.trim() || values.model.trim(), year: Number(values.year), make: values.make.trim(), model: values.model.trim(), trim: values.trim.trim(), vin, licensePlate: values.plate.trim().toUpperCase(), currentOdometer: mileage, odometerUpdatedAt: mileage !== vehicle.currentOdometer ? new Date().toISOString().slice(0, 10) : vehicle.odometerUpdatedAt, vinLookup: vinChanged ? undefined : vehicle.vinLookup, updatedAt: new Date().toISOString() });
+      await onSaved();
+    } catch (caught) { setError(caught instanceof Error ? caught.message : 'The vehicle details could not be updated.'); }
+    finally { setBusy(false); }
+  };
+  return <Dialog open onOpenChange={(open) => !open && onClose()}><DialogContent className="app-dialog max-sm:!translate-x-0 max-sm:!translate-y-0" showCloseButton={false}><DialogHeader><div className="dialog-heading"><div><DialogTitle>Edit vehicle</DialogTitle><DialogDescription>Correct any vehicle detail without affecting its documents or maintenance records.</DialogDescription></div><button className="dialog-close" onClick={onClose} aria-label="Close"><X /></button></div></DialogHeader><form className="app-form" onSubmit={save}><div className="form-row"><label>Year<Input value={values.year} onChange={(event) => update('year', event.target.value)} type="number" inputMode="numeric" min="1900" max="2100" required /></label><label>Make<Input value={values.make} onChange={(event) => update('make', event.target.value)} required /></label></div><label>Model<Input value={values.model} onChange={(event) => update('model', event.target.value)} required /></label><div className="form-row"><label>Nickname <span>optional</span><Input value={values.nickname} onChange={(event) => update('nickname', event.target.value)} /></label><label>Trim <span>optional</span><Input value={values.trim} onChange={(event) => update('trim', event.target.value)} /></label></div><label>VIN <span>optional</span><Input value={values.vin} onChange={(event) => update('vin', event.target.value)} maxLength={17} autoCapitalize="characters" /></label>{vehicle.vinLookup && <p className="form-note"><Info />Changing the VIN removes the saved VIN details and recall check. You can run a new check after saving.</p>}<div className="form-row"><label>License plate <span>optional</span><Input value={values.plate} onChange={(event) => update('plate', event.target.value)} autoCapitalize="characters" /></label><label>Current mileage <span>optional</span><Input value={values.mileage} onChange={(event) => update('mileage', event.target.value)} type="number" inputMode="numeric" min="0" /></label></div>{error && <p className="form-error" role="alert">{error}</p>}<Button type="submit" className="submit-control" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}<Check /></Button></form></DialogContent></Dialog>;
 }
 
 function DocumentForm({ vehicles, onSaved }: { vehicles: Vehicle[]; onSaved: () => Promise<void> }) {
