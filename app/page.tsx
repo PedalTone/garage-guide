@@ -25,6 +25,7 @@ type FormSubmitEvent = { preventDefault(): void; currentTarget: HTMLFormElement 
 type RestoreCandidate = { snapshot: AppSnapshot; exportedAt?: string; fileName: string };
 
 const emptySnapshot: AppSnapshot = { vehicles: [], documents: [], maintenanceRecords: [], resourceLinks: [] };
+const APP_VERSION = '1.0';
 const resourceLinks = [
   { label: 'Virginia DMV registration', organization: 'Virginia DMV', url: 'https://www.dmv.virginia.gov/vehicles/registration' },
   { label: 'Virginia emissions information', organization: 'Virginia DEQ', url: 'https://www.deq.virginia.gov/air-energy/vehicle-emissions-air-check' },
@@ -197,7 +198,7 @@ export default function Home() {
   if (!snapshot.vehicles.length) return (
     <main className="onboarding">
       <section className="onboarding-card">
-        <div className="intro-brand"><span className="brand-mark"><CarFront size={24} /></span><strong>Garage Guide</strong></div>
+        <div className="intro-brand"><span className="brand-mark"><CarFront size={24} /></span><strong>Garage Guide <span className="app-version">(v{APP_VERSION})</span></strong></div>
         <p className="eyebrow">Let’s get your garage organized</p>
         <h1>We’ll take it one easy step at a time.</h1>
         <p className="intro-copy">Start with one vehicle. Then Garage Guide will show you exactly which documents and details to add next.</p>
@@ -217,7 +218,7 @@ export default function Home() {
     <main className="app-shell">
       <div className="trust-banner"><ShieldCheck />Your garage stays private on this device</div>
       <aside className="desktop-rail" aria-label="Primary navigation">
-        <button className="brand brand-button" onClick={() => setView('today')} aria-label="Garage Guide home"><span className="brand-mark"><CarFront size={22} /></span><span>Garage Guide</span></button>
+        <button className="brand brand-button" onClick={() => setView('today')} aria-label="Garage Guide home"><span className="brand-mark"><CarFront size={22} /></span><span>Garage Guide <span className="app-version">(v{APP_VERSION})</span></span></button>
         <NavLinks view={view} setView={setView} />
         <p className="privacy-note"><ShieldCheck size={17} />Private to this device</p>
       </aside>
