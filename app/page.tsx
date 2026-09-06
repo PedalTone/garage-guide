@@ -25,7 +25,7 @@ type FormSubmitEvent = { preventDefault(): void; currentTarget: HTMLFormElement 
 type RestoreCandidate = { snapshot: AppSnapshot; exportedAt?: string; fileName: string };
 
 const emptySnapshot: AppSnapshot = { vehicles: [], documents: [], maintenanceRecords: [], resourceLinks: [] };
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.3.1';
 const resourceLinks = [
   { label: 'Virginia DMV registration', organization: 'Virginia DMV', url: 'https://www.dmv.virginia.gov/vehicles/registration' },
   { label: 'Virginia emissions information', organization: 'Virginia DEQ', url: 'https://www.deq.virginia.gov/air-energy/vehicle-emissions-air-check' },
@@ -48,7 +48,9 @@ function usePhotoPaste(setFile: (file: File | null) => void, file: File | null) 
     document.addEventListener('paste', paste);
     const picker = document.querySelector('.photo-input input[type="file"]');
     const photoLabel = picker?.parentElement;
-    if (picker && photoLabel && !photoLabel.parentElement?.querySelector('.paste-screenshot-button')) {
+    const form = photoLabel?.parentElement;
+    const attachPasteControl = () => {
+      if (!picker || !photoLabel || !form || form.querySelector('.paste-screenshot-button')) return;
       picker.removeAttribute('capture');
       const button = document.createElement('button');
       button.type = 'button';
@@ -65,8 +67,11 @@ function usePhotoPaste(setFile: (file: File | null) => void, file: File | null) 
       });
       photoLabel.insertAdjacentElement('afterend', button);
       button.insertAdjacentElement('afterend', message);
-    }
-    return () => document.removeEventListener('paste', paste);
+    };
+    attachPasteControl();
+    const observer = form ? new MutationObserver(attachPasteControl) : null;
+    if (observer && form) observer.observe(form, { childList: true });
+    return () => { document.removeEventListener('paste', paste); observer?.disconnect(); };
   }, [setFile, file]);
 }
 
