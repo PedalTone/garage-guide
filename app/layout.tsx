@@ -10,17 +10,17 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Garage Guide (v1.2) — Your vehicle life, organized',
+  title: 'Garage Guide (v1.2.1) — Your vehicle life, organized',
   description: 'A private, local-first home for vehicle documents, deadlines, and maintenance records.',
   manifest: './manifest.webmanifest',
   icons: { icon: './favicon.svg', apple: './apple-touch-icon.png' },
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Garage Guide (v1.2)' },
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Garage Guide (v1.2.1)' },
   openGraph: {
-    title: 'Garage Guide (v1.2)',
+    title: 'Garage Guide (v1.2.1)',
     description: 'Your vehicle life, organized.',
     images: [{ url: './og.png', width: 1200, height: 630, alt: 'Garage Guide — Your vehicle life, organized.' }],
   },
-  twitter: { card: 'summary_large_image', title: 'Garage Guide (v1.2)', description: 'Your vehicle life, organized.', images: ['./og.png'] },
+  twitter: { card: 'summary_large_image', title: 'Garage Guide (v1.2.1)', description: 'Your vehicle life, organized.', images: ['./og.png'] },
 };
 
 export default function RootLayout({

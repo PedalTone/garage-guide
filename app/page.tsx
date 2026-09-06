@@ -25,12 +25,30 @@ type FormSubmitEvent = { preventDefault(): void; currentTarget: HTMLFormElement 
 type RestoreCandidate = { snapshot: AppSnapshot; exportedAt?: string; fileName: string };
 
 const emptySnapshot: AppSnapshot = { vehicles: [], documents: [], maintenanceRecords: [], resourceLinks: [] };
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.2.1';
 const resourceLinks = [
   { label: 'Virginia DMV registration', organization: 'Virginia DMV', url: 'https://www.dmv.virginia.gov/vehicles/registration' },
   { label: 'Virginia emissions information', organization: 'Virginia DEQ', url: 'https://www.deq.virginia.gov/air-energy/vehicle-emissions-air-check' },
   { label: 'Check vehicle recalls', organization: 'NHTSA', url: 'https://www.nhtsa.gov/recalls' },
 ];
+
+function pastedImageFile(clipboardData: DataTransfer) {
+  const image = Array.from(clipboardData.items).find((item) => item.kind === 'file' && item.type.startsWith('image/'))?.getAsFile();
+  return image ? new File([image], `pasted-screenshot-${Date.now()}.png`, { type: image.type || 'image/png' }) : null;
+}
+
+function usePhotoPaste(setFile: (file: File | null) => void) {
+  useEffect(() => {
+    const paste = (event: ClipboardEvent) => {
+      if (!document.querySelector('.photo-input')) return;
+      if (event.target instanceof Element && event.target.closest('textarea, select, input:not([type="file"])')) return;
+      const image = event.clipboardData ? pastedImageFile(event.clipboardData) : null;
+      if (image) { event.preventDefault(); setFile(image); }
+    };
+    document.addEventListener('paste', paste);
+    return () => document.removeEventListener('paste', paste);
+  }, [setFile]);
+}
 
 function niceDate(value?: string) {
   if (!value) return 'Date needed';
@@ -492,6 +510,7 @@ function EditVehicleDialog({ vehicle, onClose, onSaved }: { vehicle: Vehicle; on
 
 function DocumentForm({ vehicles, onSaved }: { vehicles: Vehicle[]; onSaved: () => Promise<void> }) {
   const [file, setFile] = useState<File | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [category, setCategory] = useState<DocumentCategory>('insurance');
+  usePhotoPaste(setFile);
   const submit = async (event: FormSubmitEvent) => { event.preventDefault(); setBusy(true); setError(''); try { const data = new FormData(event.currentTarget); const id = crypto.randomUUID(); const assets = file ? await prepareDocumentImages(file, id) : []; const now = new Date().toISOString(); const savedCategory = data.get('category') as DocumentCategory; const field = (name: string) => String(data.get(name) || ''); const record: DocumentRecord = { id, vehicleId: String(data.get('vehicleId')), category: savedCategory, title: String(data.get('title') || categoryLabels[savedCategory]), issueDate: String(data.get('issueDate')), expirationDate: String(data.get('expirationDate') || '') || undefined, primaryImageId: assets.find((asset) => asset.role === 'document')?.id, thumbnailImageId: assets.find((asset) => asset.role === 'thumbnail')?.id, fields: { carrier: field('issuer'), policyNumber: field('reference'), phone: field('phone'), bodilyInjuryPerPerson: field('bodilyInjuryPerPerson'), bodilyInjuryPerAccident: field('bodilyInjuryPerAccident'), propertyDamage: field('propertyDamage'), uninsuredPerPerson: field('uninsuredPerPerson'), uninsuredPerAccident: field('uninsuredPerAccident'), medicalPayments: field('medicalPayments'), collisionDeductible: field('collisionDeductible'), comprehensiveDeductible: field('comprehensiveDeductible'), rentalCoverage: field('rentalCoverage'), roadsideCoverage: field('roadsideCoverage') }, extractionStatus: 'confirmed', notes: String(data.get('notes') || ''), createdAt: now, updatedAt: now }; await saveDocument(record, assets); await onSaved(); } catch (caught) { setError(caught instanceof Error ? caught.message : 'The document could not be saved.'); } finally { setBusy(false); } };
   return <form className="app-form" onSubmit={submit}><label>Vehicle<NativeSelect name="vehicleId" required>{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.nickname} · {vehicle.year} {vehicle.make}</option>)}</NativeSelect></label><label>Document type<NativeSelect name="category" required value={category} onChange={(event) => setCategory(event.target.value as DocumentCategory)}><option value="insurance">Insurance</option><option value="registration">Registration</option><option value="inspection">Safety inspection</option><option value="emissions">Emissions test</option><option value="maintenance">Maintenance receipt</option><option value="other">Other document</option></NativeSelect></label><label className="photo-input"><span className="photo-icon"><Camera /></span><span><strong>{file ? file.name : 'Take or choose a photo'}</strong><small>Flat surface · all corners visible · avoid glare</small></span><Input name="photo" type="file" accept="image/*" capture="environment" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label><label>Title<Input name="title" placeholder="Travelers insurance card" /></label><div className="form-row"><label>Issue or service date<Input name="issueDate" type="date" required /></label><label>Expiration date <span>optional</span><Input name="expirationDate" type="date" /></label></div><div className="form-row"><label>Issuer or merchant <span>optional</span><Input name="issuer" placeholder="Travelers" /></label><label>Policy or reference no. <span>optional</span><Input name="reference" /></label></div>{category === 'insurance' && <fieldset className="coverage-fields"><legend>Coverage limits</legend><p>Copy the amounts from your policy declarations page. Leave anything that does not apply blank.</p><label>Claims phone <span>optional</span><Input name="phone" type="tel" inputMode="tel" placeholder="800-555-0123" /></label><div className="coverage-form-group"><strong>Bodily injury liability</strong><div className="form-row"><label>Bodily injury per person ($)<Input name="bodilyInjuryPerPerson" type="number" inputMode="numeric" min="0" placeholder="250000" /></label><label>Bodily injury per accident ($)<Input name="bodilyInjuryPerAccident" type="number" inputMode="numeric" min="0" placeholder="500000" /></label></div></div><div className="form-row"><label>Property damage, per accident ($)<Input name="propertyDamage" type="number" inputMode="numeric" min="0" placeholder="100000" /></label><label>Medical payments / PIP ($)<Input name="medicalPayments" type="number" inputMode="numeric" min="0" placeholder="5000" /></label></div><div className="coverage-form-group"><strong>Uninsured / underinsured motorist</strong><div className="form-row"><label>Uninsured motorist per person ($)<Input name="uninsuredPerPerson" type="number" inputMode="numeric" min="0" placeholder="250000" /></label><label>Uninsured motorist per accident ($)<Input name="uninsuredPerAccident" type="number" inputMode="numeric" min="0" placeholder="500000" /></label></div></div><div className="form-row"><label>Collision deductible ($)<Input name="collisionDeductible" type="number" inputMode="numeric" min="0" placeholder="500" /></label><label>Comprehensive deductible ($)<Input name="comprehensiveDeductible" type="number" inputMode="numeric" min="0" placeholder="100" /></label></div><div className="form-row"><label>Rental reimbursement <span>optional</span><Input name="rentalCoverage" placeholder="$50/day · $1,500 max" /></label><label>Roadside assistance <span>optional</span><NativeSelect name="roadsideCoverage"><option value="">Not recorded</option><option>Included</option><option>Not included</option></NativeSelect></label></div></fieldset>}<label>Notes <span>optional</span><Input name="notes" /></label>{error && <p className="form-error" role="alert">{error}</p>}<p className="form-note"><ShieldCheck />This version stores and processes the photo only on this device.</p><Button type="submit" className="submit-control" disabled={busy}>{busy ? 'Preparing photo…' : 'Save document'}</Button></form>;
 }
@@ -501,6 +520,7 @@ function EditDocumentDialog({ record, vehicles, onClose, onSaved }: { record: Do
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [category, setCategory] = useState<DocumentCategory>(record.category);
+  usePhotoPaste(setFile);
   const [values, setValues] = useState({ vehicleId: record.vehicleId, title: record.title, issueDate: record.issueDate, expirationDate: record.expirationDate || '', issuer: String(record.fields.carrier || ''), reference: String(record.fields.policyNumber || ''), phone: String(record.fields.phone || ''), bodilyInjuryPerPerson: String(record.fields.bodilyInjuryPerPerson || ''), bodilyInjuryPerAccident: String(record.fields.bodilyInjuryPerAccident || ''), propertyDamage: String(record.fields.propertyDamage || ''), uninsuredPerPerson: String(record.fields.uninsuredPerPerson || ''), uninsuredPerAccident: String(record.fields.uninsuredPerAccident || ''), medicalPayments: String(record.fields.medicalPayments || ''), collisionDeductible: String(record.fields.collisionDeductible || ''), comprehensiveDeductible: String(record.fields.comprehensiveDeductible || ''), rentalCoverage: String(record.fields.rentalCoverage || ''), roadsideCoverage: String(record.fields.roadsideCoverage || ''), notes: record.notes || '' });
   const update = (field: keyof typeof values, value: string) => setValues((current) => ({ ...current, [field]: value }));
   const save = async (event: FormSubmitEvent) => {

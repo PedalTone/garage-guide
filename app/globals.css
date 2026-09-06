@@ -257,6 +257,7 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
 .photo-input .photo-icon { width: 47px; height: 47px; display: grid; place-items: center; border-radius: 14px; background: var(--forest); color: white; }
 .photo-input strong, .photo-input small { display: block; }
 .photo-input small { margin-top: 5px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.photo-input::after { content: 'Or paste a screenshot while this form is open'; grid-column: 2; margin-top: -3px; color: var(--forest); font-size: 12px; font-weight: 700; }
 .photo-input input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .form-note { margin: 0; display: flex; gap: 8px; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .form-note svg { width: 17px; flex: 0 0 auto; color: var(--forest); }
