@@ -150,6 +150,9 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
 .vehicle-hero-icon { width: 68px; height: 68px; display: grid; place-items: center; border-radius: 20px; background: var(--forest); color: white; }
 .vehicle-hero-icon svg { width: 31px; height: 31px; }
 .more-button { width: 44px; height: 44px; border: 0; border-radius: 13px; background: var(--muted); color: white; cursor: pointer; }
+.vin-identity-button { min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #a9bfd7; border-radius: 10px; padding: 0 13px; background: white; color: var(--forest); font-size: 13px; font-weight: 750; cursor: pointer; }
+.vin-identity-button:disabled { opacity: .55; cursor: not-allowed; }
+.vin-identity-button svg { width: 18px; }
 .detail-section, .resource-section { margin-top: 34px; }
 .facts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .fact { min-width: 0; min-height: 90px; position: relative; border: 1px solid var(--line); border-radius: 17px; padding: 16px; background: rgba(255,254,251,.72); }
@@ -368,6 +371,56 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
 .checkup-steps svg { padding: 2px; border-color: #2d71b8; background: #2d71b8; color: white; }
 .checkup-steps .done { color: #245b95; }
 .guided-dialog { width: min(670px, calc(100% - 24px)); padding: 28px; border-radius: 18px; }
+.vin-dialog { width: min(860px, calc(100% - 24px)); max-width: none; max-height: calc(100dvh - 24px); overflow-y: auto; border-radius: 18px; padding: 28px; background: white; }
+.vin-consent { min-height: 480px; display: grid; justify-items: center; align-content: center; text-align: center; padding: 26px 8%; }
+.vin-shield { width: 62px; height: 62px; display: grid; place-items: center; border-radius: 18px; background: var(--forest-soft); color: var(--forest); }
+.vin-shield svg { width: 30px; height: 30px; }
+.vin-consent h2 { margin-top: 20px; font-size: 32px; }
+.vin-consent > p { max-width: 620px; margin: 12px 0 0; color: var(--muted); font-size: 16px; line-height: 1.55; }
+.vin-local-check { width: min(560px, 100%); margin-top: 23px; display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 10px; align-items: start; border-radius: 12px; padding: 15px; background: #edf6ff; color: #24486f; text-align: left; }
+.vin-local-check > svg { width: 20px; margin-top: 2px; }
+.vin-local-check strong { display: block; margin-bottom: 3px; }
+.vin-local-check span { font-size: 13px; line-height: 1.45; }
+.vin-primary { min-height: 48px; margin-top: 22px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 9px; padding: 0 19px; background: var(--forest); color: white; font-weight: 750; cursor: pointer; }
+.vin-primary:disabled { opacity: .65; cursor: wait; }
+.vin-primary svg { width: 18px; }
+.vin-results { display: grid; gap: 16px; margin-top: 5px; }
+.vin-verdict { display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 14px; border-radius: 14px; padding: 19px; background: #edf6ff; }
+.vin-verdict.warning { background: #fff3e9; }
+.vin-verdict > span { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 13px; background: #2d71b8; color: white; }
+.vin-verdict.warning > span { background: #a85627; }
+.vin-verdict h2 { font-size: 25px; }
+.vin-verdict p:not(.eyebrow) { margin: 6px 0; color: var(--muted); font-size: 14px; }
+.vin-verdict small { display: block; margin-top: 7px; color: var(--muted); font-size: 12px; }
+.vin-section { border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.vin-section .section-heading { align-items: center; margin-bottom: 14px; }
+.vin-section .section-heading h2 { font-size: 23px; }
+.vin-section .section-heading a { min-height: 44px; display: flex; align-items: center; gap: 6px; color: var(--forest); font-size: 13px; font-weight: 750; text-decoration: none; }
+.vin-section .section-heading a svg { width: 17px; }
+.vin-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.vin-detail-grid > div { min-width: 0; border-radius: 11px; padding: 13px; background: #f4f7fa; }
+.vin-detail-grid small, .vin-detail-grid strong { display: block; }
+.vin-detail-grid small { color: var(--muted); font-size: 11px; }
+.vin-detail-grid strong { margin-top: 5px; overflow-wrap: anywhere; font-size: 14px; }
+.source-note { margin: 13px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.recall-list { display: grid; gap: 9px; }
+.recall-list article { border-left: 4px solid #d94835; border-radius: 0 11px 11px 0; padding: 14px; background: #fff4f1; }
+.recall-list article > div { display: flex; justify-content: space-between; gap: 12px; }
+.recall-list article span { color: #7b342a; font-size: 12px; font-weight: 750; text-transform: uppercase; letter-spacing: .04em; }
+.recall-list article > div strong { font-size: 12px; }
+.recall-list article > p, .recall-list details p { margin: 9px 0 0; color: #553f3b; font-size: 13px; line-height: 1.5; }
+.recall-list .urgent-recall { border-radius: 8px; padding: 9px; background: #d94835; color: white; font-weight: 750; }
+.recall-list details { margin-top: 10px; }
+.recall-list summary { color: #7b342a; font-size: 13px; font-weight: 750; cursor: pointer; }
+.maintenance-guide { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.maintenance-guide > div { display: grid; grid-template-columns: 23px minmax(0,1fr); gap: 8px; border-radius: 11px; padding: 13px; background: #f4f7fa; }
+.maintenance-guide svg { width: 18px; color: var(--forest); }
+.maintenance-guide strong, .maintenance-guide small { display: block; }
+.maintenance-guide strong { font-size: 13px; }
+.maintenance-guide small { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.vin-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
+.vin-actions > button:first-child { min-height: 48px; border: 1px solid var(--line); border-radius: 9px; padding: 0 17px; background: white; color: var(--forest); font-weight: 750; cursor: pointer; }
+.vin-actions .vin-primary { margin-top: 0; }
 .guided-form { display: grid; gap: 22px; }
 .wizard-progress { padding-top: 5px; }
 .wizard-progress > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font-size: 13px; }
@@ -442,6 +495,7 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
   .vehicle-identity { grid-template-columns: 58px minmax(0,1fr) 44px; padding: 16px; gap: 13px; }
   .vehicle-hero-icon { width: 57px; height: 57px; border-radius: 17px; }
   .vehicle-identity h2 { font-size: 25px; }
+  .vin-identity-button { width: 44px; padding: 0; font-size: 0; }
   .insurance-wallet { grid-template-columns: 46px minmax(0,1fr) 20px; }
   .insurance-wallet .status-badge { display: none; }
   .record-grid.wide { grid-template-columns: 1fr; }
@@ -449,7 +503,13 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
   .settings-grid { grid-template-columns: 1fr; }
   .settings-card.primary-settings { grid-column: auto; grid-template-columns: 48px minmax(0,1fr); }
   .primary-settings .settings-icon { width: 48px; height: 48px; }
-  .viewer-dialog, .app-dialog, .print-preview-dialog { top: auto; right: 0; bottom: 0; left: 0; width: 100%; max-height: calc(100dvh - max(10px, env(safe-area-inset-top))); transform: none !important; translate: 0 0 !important; border-radius: 20px 20px 0 0; padding: 22px 18px calc(20px + env(safe-area-inset-bottom)); }
+  .viewer-dialog, .app-dialog, .print-preview-dialog, .vin-dialog { top: auto; right: 0; bottom: 0; left: 0; width: 100%; max-height: calc(100dvh - max(10px, env(safe-area-inset-top))); transform: none !important; translate: 0 0 !important; border-radius: 20px 20px 0 0; padding: 22px 18px calc(20px + env(safe-area-inset-bottom)); }
+  .vin-consent { min-height: 560px; padding-inline: 0; }
+  .vin-consent h2 { font-size: 29px; }
+  .vin-detail-grid, .maintenance-guide { grid-template-columns: 1fr; }
+  .vin-section { padding: 16px; }
+  .vin-section .section-heading { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .vin-actions { display: grid; grid-template-columns: 1fr 1.45fr; }
   .guided-dialog { min-height: min(690px, calc(100dvh - max(10px, env(safe-area-inset-top)))); }
   .wizard-step { min-height: 320px; }
   .wizard-step h2 { font-size: 30px; }

@@ -13,7 +13,7 @@ import { prepareDocumentImages } from '@/lib/image';
 import { categoryLabels, type AppSnapshot, type DocumentCategory, type DocumentRecord, type ResourceLinkRecord, type Vehicle } from '@/lib/models';
 import {
   Bell, CalendarDays, Camera, CarFront, Check, ChevronRight,
-  Copy, Download, ExternalLink, FileText, Gauge, HardDrive, Info, MoreHorizontal,
+  Copy, Download, ExternalLink, FileText, Gauge, HardDrive, Info,
   Plus, Printer, ReceiptText, ScanLine, Search, Settings, ShieldCheck, Upload, Wrench, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -102,6 +102,7 @@ export default function Home() {
   const [linkDialog, setLinkDialog] = useState(false);
   const [backupFolder, setBackupFolder] = useState<BackupFolderStatus | null>(null);
   const [restoreCandidate, setRestoreCandidate] = useState<RestoreCandidate | null>(null);
+  const [vinVehicle, setVinVehicle] = useState<Vehicle | null>(null);
 
   const refresh = async () => {
     const next = await loadSnapshot();
@@ -223,7 +224,7 @@ export default function Home() {
 
       <section className="page" id="top">
         {view === 'today' && <TodayView snapshot={snapshot} activeVehicle={activeVehicle} activeVehicleId={activeVehicleId} setActiveVehicleId={setActiveVehicleId} deadlines={deadlines} openViewer={openViewer} setAddMode={setAddMode} onExport={() => createRecordsExport(snapshot, notify)} onPrint={() => setPrintPreview(true)} backupFolder={backupFolder} onOpenStorage={() => setView('settings')} />}
-        {view === 'vehicles' && <VehiclesView snapshot={snapshot} activeVehicle={activeVehicle} setActiveVehicleId={setActiveVehicleId} activeDocs={activeDocs} maintenance={activeMaintenance} openViewer={openViewer} setAddMode={setAddMode} notify={notify} onAddLink={() => setLinkDialog(true)} />}
+        {view === 'vehicles' && <VehiclesView snapshot={snapshot} activeVehicle={activeVehicle} setActiveVehicleId={setActiveVehicleId} activeDocs={activeDocs} maintenance={activeMaintenance} openViewer={openViewer} setAddMode={setAddMode} notify={notify} onAddLink={() => setLinkDialog(true)} onVinLookup={() => setVinVehicle(activeVehicle || null)} />}
         {view === 'records' && <RecordsView records={visibleRecords} vehicles={snapshot.vehicles} search={search} setSearch={setSearch} openViewer={openViewer} setAddMode={setAddMode} />}
         {view === 'settings' && <SettingsView snapshot={snapshot} notify={notify} onPrint={() => setPrintPreview(true)} onImport={prepareRestore} backupFolder={backupFolder} onChooseFolder={configureBackupFolder} onReset={async () => { await clearGarage(); setSnapshot(emptySnapshot); setActiveVehicleId(''); setView('today'); }} />}
       </section>
@@ -234,6 +235,7 @@ export default function Home() {
       <PrintPreview open={printPreview} snapshot={snapshot} onClose={() => setPrintPreview(false)} />
       {linkDialog && <LinkDialog onClose={() => setLinkDialog(false)} onSaved={async () => { await refreshAndSync(); setLinkDialog(false); notify('Website saved'); }} />}
       <RestoreBackupDialog candidate={restoreCandidate} onClose={() => setRestoreCandidate(null)} onRestore={async () => { if (!restoreCandidate) return; await replaceAll(restoreCandidate.snapshot); await refreshAndSync(); setActiveVehicleId(restoreCandidate.snapshot.vehicles[0]?.id || ''); setRestoreCandidate(null); setView('today'); notify('Backup restored'); }} />
+      {vinVehicle && <VinLookupDialog vehicle={vinVehicle} onClose={() => setVinVehicle(null)} onSaved={async () => { await refreshAndSync(); setVinVehicle(null); notify('VIN details and recall check saved'); }} />}
       {toast && <output className="toast" key={toast.key}><Check size={18} />{toast.message}</output>}
       <GloveBoxReport snapshot={snapshot} />
     </main>
@@ -309,8 +311,8 @@ function DeadlineCard({ record, vehicle, onClick }: { record: DocumentRecord; ve
   return <button className="timeline-card" onClick={onClick}><span className="date-tile"><strong>{date ? date.getDate() : '—'}</strong><small>{date ? date.toLocaleString('en-US', { month: 'short' }).toUpperCase() : 'DATE'}</small></span><span className="timeline-copy"><strong>{categoryLabels[record.category]}</strong><small>{vehicle?.nickname} · {record.title}</small></span><span className={`status-badge ${status.tone}`}>{status.label}</span><ChevronRight size={19} /></button>;
 }
 
-function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs, maintenance, openViewer, setAddMode, notify, onAddLink }: {
-  snapshot: AppSnapshot; activeVehicle?: Vehicle; setActiveVehicleId: (id: string) => void; activeDocs: DocumentRecord[]; maintenance: AppSnapshot['maintenanceRecords']; openViewer: (record: DocumentRecord) => void; setAddMode: (mode: AddMode) => void; notify: (message: string) => void; onAddLink: () => void;
+function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs, maintenance, openViewer, setAddMode, notify, onAddLink, onVinLookup }: {
+  snapshot: AppSnapshot; activeVehicle?: Vehicle; setActiveVehicleId: (id: string) => void; activeDocs: DocumentRecord[]; maintenance: AppSnapshot['maintenanceRecords']; openViewer: (record: DocumentRecord) => void; setAddMode: (mode: AddMode) => void; notify: (message: string) => void; onAddLink: () => void; onVinLookup: () => void;
 }) {
   if (!activeVehicle) return null;
   const insurance = activeDocs.filter((record) => record.category === 'insurance').sort((a, b) => b.issueDate.localeCompare(a.issueDate))[0];
@@ -320,8 +322,8 @@ function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs,
   return <>
     <PageHeader eyebrow="Your garage" title="Vehicles" action={<button className="scan-button" onClick={() => setAddMode('vehicle')}><Plus />Add vehicle</button>} />
     <VehicleSwitcher vehicles={snapshot.vehicles} activeId={activeVehicle.id} setActiveId={setActiveVehicleId} onAdd={() => setAddMode('vehicle')} />
-    <section className="vehicle-identity"><div className="vehicle-hero-icon"><CarFront /></div><div><p className="eyebrow">{activeVehicle.nickname}</p><h2>{activeVehicle.year} {activeVehicle.make} {activeVehicle.model}</h2><p>{activeVehicle.trim || 'Trim not recorded'} · {activeVehicle.currentOdometer?.toLocaleString() || 'Mileage needed'} miles</p></div><button className="more-button" aria-label="Vehicle options"><MoreHorizontal /></button></section>
-    <section className="detail-section"><div className="section-heading"><div><p className="eyebrow">At a glance</p><h2>Quick facts</h2></div></div><div className="facts-grid">
+    <section className="vehicle-identity"><div className="vehicle-hero-icon"><CarFront /></div><div><p className="eyebrow">{activeVehicle.nickname}</p><h2>{activeVehicle.year} {activeVehicle.make} {activeVehicle.model}</h2><p>{activeVehicle.trim || 'Trim not recorded'} · {activeVehicle.currentOdometer?.toLocaleString() || 'Mileage needed'} miles</p></div><button className="vin-identity-button" onClick={onVinLookup} disabled={!activeVehicle.vin}><ShieldCheck />{activeVehicle.vinLookup ? 'Review VIN check' : 'Check VIN'}</button></section>
+    <section className="detail-section"><div className="section-heading"><div><p className="eyebrow">At a glance</p><h2>Quick facts</h2></div>{activeVehicle.vin && <button className="text-button" onClick={onVinLookup}>{activeVehicle.vinLookup ? 'Checked with NHTSA' : 'Check VIN & recalls'}<ChevronRight /></button>}</div><div className="facts-grid">
       <Fact label="VIN" value={activeVehicle.vin || 'Not recorded'} action={activeVehicle.vin ? () => copy(activeVehicle.vin!, 'VIN') : undefined} />
       <Fact label="License plate" value={activeVehicle.licensePlate || 'Not recorded'} action={activeVehicle.licensePlate ? () => copy(activeVehicle.licensePlate!, 'Plate') : undefined} />
       <Fact label="Registration" value={registration ? niceDate(registration.expirationDate) : 'Not added'} />
@@ -471,6 +473,81 @@ function MaintenanceForm({ vehicles, onSaved }: { vehicles: Vehicle[]; onSaved: 
   const [busy, setBusy] = useState(false);
   const submit = async (event: FormSubmitEvent) => { event.preventDefault(); setBusy(true); const data = new FormData(event.currentTarget); const now = new Date().toISOString(); await saveMaintenance({ id: crypto.randomUUID(), vehicleId: String(data.get('vehicleId')), serviceDate: String(data.get('serviceDate')), odometer: data.get('odometer') ? Number(data.get('odometer')) : undefined, merchant: String(data.get('merchant')), totalCents: Math.round(Number(data.get('total')) * 100), currency: 'USD', categories: [String(data.get('category'))], notes: String(data.get('notes') || ''), createdAt: now, updatedAt: now }); await onSaved(); setBusy(false); };
   return <form className="app-form" onSubmit={submit}><label>Vehicle<NativeSelect name="vehicleId">{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.nickname} · {vehicle.year} {vehicle.make}</option>)}</NativeSelect></label><label>Service category<NativeSelect name="category"><option>Oil & filter</option><option>Brake pads</option><option>Tires</option><option>Battery</option><option>Fluids</option><option>Engine</option><option>Other</option></NativeSelect></label><div className="form-row"><label>Service date<Input name="serviceDate" type="date" required /></label><label>Odometer <span>optional</span><Input name="odometer" type="number" inputMode="numeric" min="0" /></label></div><label>Shop or provider<Input name="merchant" required placeholder="Local service center" /></label><label>Total paid<Input name="total" type="number" inputMode="decimal" min="0" step="0.01" required placeholder="84.25" /></label><label>Notes <span>optional</span><Input name="notes" /></label><Button type="submit" className="submit-control" disabled={busy}>{busy ? 'Saving…' : 'Save maintenance'}</Button></form>;
+}
+
+function vinFormatError(vin: string) {
+  if (vin.length !== 17) return 'A complete VIN has 17 characters.';
+  if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) return 'VINs use letters and numbers but never I, O, or Q.';
+  return '';
+}
+
+function vinCheckDigitIsValid(vin: string) {
+  const values: Record<string, number> = { A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,J:1,K:2,L:3,M:4,N:5,P:7,R:9,S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9 };
+  const weights = [8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2];
+  const total = vin.split('').reduce((sum, character, index) => sum + (Number(character) || values[character] || 0) * weights[index], 0);
+  const expected = total % 11 === 10 ? 'X' : String(total % 11);
+  return vin[8] === expected;
+}
+
+function maintenanceStartingPoints(vehicle: Vehicle, fuelType?: string) {
+  const electric = fuelType?.toLowerCase().includes('electric');
+  const mileage = vehicle.currentOdometer;
+  const next = (interval: number) => mileage === undefined ? `Every ${interval.toLocaleString()} miles` : `Plan around ${((Math.floor(mileage / interval) + 1) * interval).toLocaleString()} miles`;
+  return [
+    ...(!electric ? [{ label: 'Oil and filter', timing: next(7500) }] : []),
+    { label: 'Rotate and inspect tires', timing: next(7500) },
+    { label: 'Inspect brakes', timing: 'At least yearly or as the owner’s manual specifies' },
+    { label: 'Cabin air filter', timing: next(20000) },
+    { label: electric ? 'Battery and cooling system' : 'Fluids and cooling system', timing: 'Follow the manufacturer’s time and mileage schedule' },
+  ];
+}
+
+function VinLookupDialog({ vehicle, onClose, onSaved }: { vehicle: Vehicle; onClose: () => void; onSaved: () => Promise<void> }) {
+  const [result, setResult] = useState<NonNullable<Vehicle['vinLookup']> | null>(vehicle.vinLookup || null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const vin = String(vehicle.vin || '').toUpperCase();
+  const lookup = async () => {
+    const formatError = vinFormatError(vin);
+    if (formatError) { setError(formatError); return; }
+    setBusy(true); setError('');
+    try {
+      const decodeResponse = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValuesExtended/${encodeURIComponent(vin)}?format=json&modelyear=${vehicle.year}`);
+      if (!decodeResponse.ok) throw new Error('NHTSA could not decode this VIN right now.');
+      const decodePayload = await decodeResponse.json() as { Results?: Array<Record<string, string>> };
+      const decoded = decodePayload.Results?.[0];
+      if (!decoded) throw new Error('NHTSA returned no vehicle details for this VIN.');
+      const decoderValid = String(decoded.ErrorCode || '').split(',').every((code) => code.trim() === '0');
+      const locallyValid = vinCheckDigitIsValid(vin);
+      let recalls: NonNullable<Vehicle['vinLookup']>['recalls'] = [];
+      let recallsChecked = false;
+      if (decoded.Make && decoded.Model && decoded.ModelYear) {
+        const recallUrl = new URL('https://api.nhtsa.gov/recalls/recallsByVehicle');
+        recallUrl.searchParams.set('make', decoded.Make); recallUrl.searchParams.set('model', decoded.Model); recallUrl.searchParams.set('modelYear', decoded.ModelYear);
+        const recallResponse = await fetch(recallUrl);
+        if (recallResponse.ok) {
+          recallsChecked = true;
+          const recallPayload = await recallResponse.json() as { results?: Array<Record<string, string | boolean>> };
+          const isWarningFlag = (value: unknown) => value === true || ['true', 'y', 'yes'].includes(String(value).toLowerCase());
+          recalls = (recallPayload.results || []).map((item) => ({ campaignNumber: String(item.NHTSACampaignNumber || ''), component: String(item.Component || 'Vehicle recall'), summary: String(item.Summary || ''), consequence: String(item.Consequence || ''), remedy: String(item.Remedy || ''), reportDate: String(item.ReportReceivedDate || ''), parkIt: isWarningFlag(item.parkIt), parkOutside: isWarningFlag(item.parkOutSide) }));
+        }
+      }
+      setResult({ checkedAt: new Date().toISOString(), source: 'NHTSA vPIC and Recalls API', valid: decoderValid && locallyValid, errorText: [!locallyValid ? 'The VIN check digit does not match.' : '', !decoderValid ? decoded.ErrorText : ''].filter(Boolean).join(' '), recallsChecked, details: { make: decoded.Make, model: decoded.Model, modelYear: decoded.ModelYear, manufacturer: decoded.Manufacturer, vehicleType: decoded.VehicleType, bodyClass: decoded.BodyClass, fuelType: decoded.FuelTypePrimary, engine: [decoded.EngineCylinders && `${decoded.EngineCylinders} cylinders`, decoded.DisplacementL && `${decoded.DisplacementL} L`].filter(Boolean).join(' · '), driveType: decoded.DriveType, plant: [decoded.PlantCity, decoded.PlantState, decoded.PlantCountry].filter(Boolean).join(', ') }, recalls });
+    } catch (caught) { setError(caught instanceof Error ? caught.message : 'The VIN lookup could not be completed.'); }
+    finally { setBusy(false); }
+  };
+  const save = async () => { if (!result) return; setBusy(true); await saveVehicle({ ...vehicle, vinLookup: result, updatedAt: new Date().toISOString() }); await onSaved(); setBusy(false); };
+  const guidance = maintenanceStartingPoints(vehicle, result?.details.fuelType);
+  return <Dialog open onOpenChange={(open) => !open && onClose()}><DialogContent className="vin-dialog max-sm:!translate-x-0 max-sm:!translate-y-0" showCloseButton={false}><DialogHeader><div className="dialog-heading"><div><p className="eyebrow">Official vehicle check</p><DialogTitle>VIN details & recalls</DialogTitle><DialogDescription>{vehicle.nickname} · VIN ending {vin.slice(-6)}</DialogDescription></div><button className="dialog-close" onClick={onClose} aria-label="Close"><X /></button></div></DialogHeader>
+    {!result && <section className="vin-consent"><span className="vin-shield"><ShieldCheck /></span><h2>Check this VIN with NHTSA?</h2><p>Garage Guide will send this 17-character VIN and the model year to two public U.S. government services: NHTSA’s VIN decoder and recall database. No documents, insurance details, mileage, or other garage records are sent.</p><div className="vin-local-check"><Check /><span><strong>Local format check</strong>{vinFormatError(vin) || (vinCheckDigitIsValid(vin) ? 'The length, characters, and check digit look valid.' : 'The VIN’s check digit does not match. NHTSA can provide additional detail.')}</span></div><button className="vin-primary" onClick={lookup} disabled={busy || Boolean(vinFormatError(vin))}>{busy ? 'Checking NHTSA…' : 'Send VIN and check'}<ChevronRight /></button></section>}
+    {result && <div className="vin-results"><section className={`vin-verdict ${result.valid ? 'valid' : 'warning'}`}><span>{result.valid ? <Check /> : <Info />}</span><div><p className="eyebrow">VIN result</p><h2>{result.valid ? 'The VIN decoded successfully.' : 'This VIN needs review.'}</h2>{result.errorText && <p>{result.errorText}</p>}<small>Checked {new Date(result.checkedAt).toLocaleString()} · Source: {result.source}</small></div></section>
+      <section className="vin-section"><div className="section-heading"><div><p className="eyebrow">Decoded by NHTSA</p><h2>Vehicle details</h2></div></div><div className="vin-detail-grid">{Object.entries({ 'Year, make & model': [result.details.modelYear, result.details.make, result.details.model].filter(Boolean).join(' '), 'Vehicle type': result.details.vehicleType, 'Body style': result.details.bodyClass, 'Fuel': result.details.fuelType, 'Engine': result.details.engine, 'Drive type': result.details.driveType, 'Manufacturer': result.details.manufacturer, 'Assembly plant': result.details.plant }).filter(([, value]) => value).map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div><p className="source-note">Decoded details are suggestions until you confirm them against the vehicle or its documents.</p></section>
+      <section className="vin-section"><div className="section-heading"><div><p className="eyebrow">Safety check</p><h2>{result.recalls.length ? `${result.recalls.length} recall${result.recalls.length === 1 ? '' : 's'} found` : result.recallsChecked ? 'No recalls found' : 'Recall check unavailable'}</h2></div><a href={`https://www.nhtsa.gov/recalls?vin=${encodeURIComponent(vin)}`} target="_blank" rel="noreferrer">Verify with NHTSA<ExternalLink /></a></div>{result.recalls.length ? <div className="recall-list">{result.recalls.map((recall) => <article key={recall.campaignNumber}><div><span>{recall.component}</span><strong>{recall.campaignNumber}</strong></div>{(recall.parkIt || recall.parkOutside) && <p className="urgent-recall">Important parking or driving warning—open the official NHTSA record now.</p>}<p>{recall.summary}</p>{recall.remedy && <details><summary>Remedy information</summary><p>{recall.remedy}</p></details>}</article>)}</div> : <p className="source-note">{result.recallsChecked ? 'Results can change. Check NHTSA again periodically and contact the manufacturer or a dealer with questions.' : 'The automatic recall search did not complete. Use the official NHTSA link to check this VIN directly.'}</p>}</section>
+      <section className="vin-section"><div className="section-heading"><div><p className="eyebrow">Planning aid</p><h2>Maintenance starting points</h2></div></div><div className="maintenance-guide">{guidance.map((item) => <div key={item.label}><Check /><span><strong>{item.label}</strong><small>{item.timing}</small></span></div>)}</div><p className="source-note">These are general planning prompts, not the manufacturer’s schedule. Confirm every interval in the owner’s manual before relying on it.</p></section>
+      <div className="vin-actions"><button onClick={() => { setResult(null); setError(''); }}>Check again</button><button className="vin-primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save checked details'}<Check /></button></div>
+    </div>}
+    {error && <p className="form-error" role="alert">{error}</p>}
+  </DialogContent></Dialog>;
 }
 
 function DocumentViewer({ record, vehicle, imageUrl, onClose, notify }: { record: DocumentRecord | null; vehicle?: Vehicle; imageUrl: string | null; onClose: () => void; notify: (message: string) => void }) {

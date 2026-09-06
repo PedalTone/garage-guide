@@ -10,6 +10,35 @@ export type Vehicle = {
   jurisdiction: string;
   currentOdometer?: number;
   odometerUpdatedAt?: string;
+  vinLookup?: {
+    checkedAt: string;
+    source: 'NHTSA vPIC and Recalls API';
+    valid: boolean;
+    errorText?: string;
+    recallsChecked: boolean;
+    details: {
+      make?: string;
+      model?: string;
+      modelYear?: string;
+      manufacturer?: string;
+      vehicleType?: string;
+      bodyClass?: string;
+      fuelType?: string;
+      engine?: string;
+      driveType?: string;
+      plant?: string;
+    };
+    recalls: Array<{
+      campaignNumber: string;
+      component: string;
+      summary: string;
+      consequence?: string;
+      remedy?: string;
+      reportDate?: string;
+      parkIt?: boolean;
+      parkOutside?: boolean;
+    }>;
+  };
   createdAt: string;
   updatedAt: string;
 };
