@@ -226,16 +226,22 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
 .settings-card { min-height: 180px; display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 16px; align-content: start; border: 1px solid var(--line); border-radius: 21px; padding: 21px; background: var(--surface); }
 .settings-card.primary-settings { grid-column: 1 / -1; min-height: 220px; grid-template-columns: 58px minmax(0,1fr); background: var(--forest); color: white; }
 .settings-card.primary-settings .eyebrow, .settings-card.primary-settings p { color: #c7dbd5; }
+.settings-card.primary-settings p:not(.eyebrow) { color: #eff8f4; }
 .settings-card h2 { font-size: 29px; }
 .settings-card h3 { font-size: 17px; }
 .settings-card p:not(.eyebrow) { max-width: 600px; margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .folder-settings { grid-column: 1 / -1; min-height: 170px; }
 .folder-settings.folder-ready { border-color: #9bb9b0; background: #f3f8f5; }
 .folder-button { min-height: 44px; margin-top: 15px; border: 1px solid var(--forest); border-radius: 12px; padding: 0 14px; background: transparent; color: var(--forest); font-weight: 720; cursor: pointer; }
+.folder-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.folder-actions .folder-button { margin-top: 15px; }
+.secondary-folder-button { border-color: #9fb7b0; }
 .about-settings { grid-column: 1 / -1; min-height: 0; }
 .about-settings ul { margin: 15px 0 0; padding-left: 19px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .about-settings li + li { margin-top: 7px; }
 .about-settings .about-callout { max-width: none; margin-top: 16px; border-left: 4px solid var(--forest); border-radius: 0 11px 11px 0; padding: 12px 14px; background: var(--forest-soft); color: var(--forest); }
+.about-settings details { margin-top: 15px; border-top: 1px solid var(--line); padding-top: 14px; }
+.about-settings summary { color: var(--forest); font-size: 14px; font-weight: 750; cursor: pointer; }
 .settings-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: var(--forest-soft); color: var(--forest); }
 .primary-settings .settings-icon { width: 58px; height: 58px; background: rgba(255,255,255,.12); color: white; }
 .settings-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
