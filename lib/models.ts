@@ -5,6 +5,9 @@ export type Vehicle = {
   make: string;
   model: string;
   trim?: string;
+  color?: string;
+  primaryImageId?: string;
+  thumbnailImageId?: string;
   vin?: string;
   licensePlate?: string;
   jurisdiction: string;

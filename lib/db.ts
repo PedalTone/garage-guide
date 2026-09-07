@@ -62,6 +62,19 @@ export async function saveVehicle(vehicle: Vehicle): Promise<void> {
   db.close();
 }
 
+export async function saveVehicleImage(vehicle: Vehicle, assets: ImageAsset[], replacedImageIds: string[] = []): Promise<void> {
+  const db = await openGarageDb();
+  const tx = db.transaction(['vehicles', 'images'], 'readwrite');
+  tx.objectStore('vehicles').put(vehicle);
+  for (const imageId of replacedImageIds) tx.objectStore('images').delete(imageId);
+  for (const asset of assets) tx.objectStore('images').put(asset);
+  await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
 export async function saveDocument(record: DocumentRecord, assets: ImageAsset[] = [], replacedImageIds: string[] = []): Promise<void> {
   const db = await openGarageDb();
   const tx = db.transaction(['documents', 'images'], 'readwrite');

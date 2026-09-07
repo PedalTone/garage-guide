@@ -1,4 +1,4 @@
-const CACHE = 'garage-guide-shell-v4';
+const CACHE = 'garage-guide-shell-v5';
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.add('./')));
   self.skipWaiting();

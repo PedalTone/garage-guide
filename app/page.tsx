@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
-import { clearGarage, getImageUrl, loadSnapshot, replaceAll, saveDocument, saveMaintenance, saveResourceLink, saveVehicle } from '@/lib/db';
+import { clearGarage, getImageUrl, loadSnapshot, replaceAll, saveDocument, saveMaintenance, saveResourceLink, saveVehicle, saveVehicleImage } from '@/lib/db';
 import { sampleGarage } from '@/lib/demo';
 import { chooseBackupFolder, getBackupFolderStatus, syncBackupFolder, type BackupFolderStatus } from '@/lib/folder-backup';
 import { prepareDocumentImages } from '@/lib/image';
@@ -25,7 +25,7 @@ type FormSubmitEvent = { preventDefault(): void; currentTarget: HTMLFormElement 
 type RestoreCandidate = { snapshot: AppSnapshot; exportedAt?: string; fileName: string };
 
 const emptySnapshot: AppSnapshot = { vehicles: [], documents: [], maintenanceRecords: [], resourceLinks: [] };
-const APP_VERSION = '1.3.2';
+const APP_VERSION = '1.4';
 const resourceLinks = [
   { label: 'Virginia DMV registration', organization: 'Virginia DMV', url: 'https://www.dmv.virginia.gov/vehicles/registration' },
   { label: 'Virginia emissions information', organization: 'Virginia DEQ', url: 'https://www.deq.virginia.gov/air-energy/vehicle-emissions-air-check' },
@@ -86,6 +86,41 @@ async function readClipboardImage() {
     }
   }
   throw new Error('No screenshot was found on your clipboard.');
+}
+
+function VehicleAvatar({ vehicle, className = '' }: { vehicle: Vehicle; className?: string }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    let url: string | null = null;
+    void getImageUrl(vehicle.thumbnailImageId || vehicle.primaryImageId).then((nextUrl) => {
+      url = nextUrl;
+      if (active) setImageUrl(nextUrl);
+      else if (nextUrl) URL.revokeObjectURL(nextUrl);
+    });
+    return () => { active = false; if (url) URL.revokeObjectURL(url); };
+  }, [vehicle.thumbnailImageId, vehicle.primaryImageId]);
+  return <span className={`vehicle-avatar ${className}`} style={{ backgroundColor: vehicle.color || '#2f6db2' }}>{imageUrl ? <img src={imageUrl} alt={`${vehicle.nickname} vehicle`} /> : <CarFront />}</span>;
+}
+
+function VehicleAppearanceDialog({ vehicle, onClose, onSaved }: { vehicle: Vehicle; onClose: () => void; onSaved: () => Promise<void> }) {
+  const [color, setColor] = useState(vehicle.color || '#2f6db2');
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const save = async () => {
+    setBusy(true); setError('');
+    try {
+      const assets = file ? await prepareDocumentImages(file, vehicle.id) : [];
+      const primaryImageId = assets.find((asset) => asset.role === 'document')?.id || vehicle.primaryImageId;
+      const thumbnailImageId = assets.find((asset) => asset.role === 'thumbnail')?.id || vehicle.thumbnailImageId;
+      const replacedImageIds = assets.length ? [vehicle.primaryImageId, vehicle.thumbnailImageId].filter((id): id is string => Boolean(id)) : [];
+      await saveVehicleImage({ ...vehicle, color, primaryImageId, thumbnailImageId, updatedAt: new Date().toISOString() }, assets, replacedImageIds);
+      await onSaved();
+    } catch (caught) { setError(caught instanceof Error ? caught.message : 'The vehicle appearance could not be saved.'); }
+    finally { setBusy(false); }
+  };
+  return <Dialog open onOpenChange={(open) => !open && onClose()}><DialogContent className="app-dialog max-sm:!translate-x-0 max-sm:!translate-y-0" showCloseButton={false}><DialogHeader><div className="dialog-heading"><div><DialogTitle>Vehicle appearance</DialogTitle><DialogDescription>Choose a color and optionally add a photo of your vehicle. Both remain on this device.</DialogDescription></div><button className="dialog-close" onClick={onClose} aria-label="Close"><X /></button></div></DialogHeader><div className="app-form"><label>Vehicle color<div className="vehicle-color-control"><input aria-label="Vehicle color" type="color" value={color} onChange={(event) => setColor(event.target.value)} /><Input value={color.toUpperCase()} onChange={(event) => /^#[0-9A-Fa-f]{6}$/.test(event.target.value) && setColor(event.target.value)} /></div></label><label className="photo-input"><span className="photo-icon"><Camera /></span><span><strong>{file ? file.name : vehicle.primaryImageId ? 'Replace vehicle photo' : 'Take or choose your vehicle photo'}</strong><small>{file ? 'New vehicle photo ready to save' : 'Use a clear exterior photo—the app will use it as the vehicle icon.'}</small></span><Input type="file" accept="image/*" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<Button className="submit-control" onClick={() => void save()} disabled={busy}>{busy ? 'Saving…' : 'Save appearance'}<Check /></Button></div></DialogContent></Dialog>;
 }
 
 
@@ -162,6 +197,7 @@ export default function Home() {
   const [restoreCandidate, setRestoreCandidate] = useState<RestoreCandidate | null>(null);
   const [vinVehicle, setVinVehicle] = useState<Vehicle | null>(null);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [appearanceVehicle, setAppearanceVehicle] = useState<Vehicle | null>(null);
   const [editingRecord, setEditingRecord] = useState<DocumentRecord | null>(null);
 
   const refresh = async () => {
@@ -284,7 +320,7 @@ export default function Home() {
 
       <section className="page" id="top">
         {view === 'today' && <TodayView snapshot={snapshot} activeVehicle={activeVehicle} activeVehicleId={activeVehicleId} setActiveVehicleId={setActiveVehicleId} deadlines={deadlines} openViewer={openViewer} setAddMode={setAddMode} onExport={() => createRecordsExport(snapshot, notify)} onPrint={() => setPrintPreview(true)} backupFolder={backupFolder} onOpenStorage={() => setView('settings')} />}
-        {view === 'vehicles' && <VehiclesView snapshot={snapshot} activeVehicle={activeVehicle} setActiveVehicleId={setActiveVehicleId} activeDocs={activeDocs} maintenance={activeMaintenance} openViewer={openViewer} setAddMode={setAddMode} notify={notify} onAddLink={() => setLinkDialog(true)} onVinLookup={() => setVinVehicle(activeVehicle || null)} onEditVehicle={() => setEditingVehicle(activeVehicle || null)} />}
+        {view === 'vehicles' && <VehiclesView snapshot={snapshot} activeVehicle={activeVehicle} setActiveVehicleId={setActiveVehicleId} activeDocs={activeDocs} maintenance={activeMaintenance} openViewer={openViewer} setAddMode={setAddMode} notify={notify} onAddLink={() => setLinkDialog(true)} onVinLookup={() => setVinVehicle(activeVehicle || null)} onEditVehicle={() => setEditingVehicle(activeVehicle || null)} onEditAppearance={() => setAppearanceVehicle(activeVehicle || null)} />}
         {view === 'records' && <RecordsView records={visibleRecords} vehicles={snapshot.vehicles} search={search} setSearch={setSearch} openViewer={openViewer} setAddMode={setAddMode} />}
         {view === 'settings' && <SettingsView snapshot={snapshot} notify={notify} onPrint={() => setPrintPreview(true)} onImport={prepareRestore} backupFolder={backupFolder} onChooseFolder={configureBackupFolder} onReset={async () => { await clearGarage(); setSnapshot(emptySnapshot); setActiveVehicleId(''); setView('today'); }} />}
       </section>
@@ -295,6 +331,7 @@ export default function Home() {
       <PrintPreview open={printPreview} snapshot={snapshot} onClose={() => setPrintPreview(false)} />
       {linkDialog && <LinkDialog onClose={() => setLinkDialog(false)} onSaved={async () => { await refreshAndSync(); setLinkDialog(false); notify('Website saved'); }} />}
       {editingVehicle && <EditVehicleDialog vehicle={editingVehicle} onClose={() => setEditingVehicle(null)} onSaved={async () => { await refreshAndSync(); setEditingVehicle(null); notify('Vehicle details updated'); }} />}
+      {appearanceVehicle && <VehicleAppearanceDialog vehicle={appearanceVehicle} onClose={() => setAppearanceVehicle(null)} onSaved={async () => { await refreshAndSync(); setAppearanceVehicle(null); notify('Vehicle appearance updated'); }} />}
       {editingRecord && <EditDocumentDialog record={editingRecord} vehicles={snapshot.vehicles} onClose={() => setEditingRecord(null)} onSaved={async () => { await refreshAndSync(); setEditingRecord(null); notify('Record updated'); }} />}
       <RestoreBackupDialog candidate={restoreCandidate} onClose={() => setRestoreCandidate(null)} onRestore={async () => { if (!restoreCandidate) return; await replaceAll(restoreCandidate.snapshot); await refreshAndSync(); setActiveVehicleId(restoreCandidate.snapshot.vehicles[0]?.id || ''); setRestoreCandidate(null); setView('today'); notify('Backup restored'); }} />
       {vinVehicle && <VinLookupDialog vehicle={vinVehicle} onClose={() => setVinVehicle(null)} onSaved={async () => { await refreshAndSync(); setVinVehicle(null); notify('VIN details and recall check saved'); }} />}
@@ -364,7 +401,7 @@ function TodayView({ snapshot, activeVehicle, activeVehicleId, setActiveVehicleI
 }
 
 function VehicleSwitcher({ vehicles, activeId, setActiveId, onAdd }: { vehicles: Vehicle[]; activeId: string; setActiveId: (id: string) => void; onAdd: () => void }) {
-  return <section className="vehicle-switcher" aria-label="Choose a vehicle">{vehicles.map((vehicle) => <button key={vehicle.id} className={`vehicle-pill ${activeId === vehicle.id ? 'selected' : ''}`} onClick={() => setActiveId(vehicle.id)} aria-pressed={activeId === vehicle.id}><span className="vehicle-dot"><CarFront size={18} /></span><span><strong>{vehicle.nickname}</strong><small>{vehicle.year} {vehicle.make}</small></span></button>)}<button className="vehicle-pill add-vehicle" onClick={onAdd}><Plus size={19} />Add vehicle</button></section>;
+  return <section className="vehicle-switcher" aria-label="Choose a vehicle">{vehicles.map((vehicle) => <button key={vehicle.id} className={`vehicle-pill ${activeId === vehicle.id ? 'selected' : ''}`} onClick={() => setActiveId(vehicle.id)} aria-pressed={activeId === vehicle.id}><VehicleAvatar vehicle={vehicle} className="vehicle-dot" /><span><strong>{vehicle.nickname}</strong><small>{vehicle.year} {vehicle.make}</small></span></button>)}<button className="vehicle-pill add-vehicle" onClick={onAdd}><Plus size={19} />Add vehicle</button></section>;
 }
 
 function DeadlineCard({ record, vehicle, onClick }: { record: DocumentRecord; vehicle?: Vehicle; onClick: () => void }) {
@@ -373,8 +410,8 @@ function DeadlineCard({ record, vehicle, onClick }: { record: DocumentRecord; ve
   return <button className="timeline-card" onClick={onClick}><span className="date-tile"><strong>{date ? date.getDate() : '—'}</strong><small>{date ? date.toLocaleString('en-US', { month: 'short' }).toUpperCase() : 'DATE'}</small></span><span className="timeline-copy"><strong>{categoryLabels[record.category]}</strong><small>{vehicle?.nickname} · {record.title}</small></span><span className={`status-badge ${status.tone}`}>{status.label}</span><ChevronRight size={19} /></button>;
 }
 
-function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs, maintenance, openViewer, setAddMode, notify, onAddLink, onVinLookup, onEditVehicle }: {
-  snapshot: AppSnapshot; activeVehicle?: Vehicle; setActiveVehicleId: (id: string) => void; activeDocs: DocumentRecord[]; maintenance: AppSnapshot['maintenanceRecords']; openViewer: (record: DocumentRecord) => void; setAddMode: (mode: AddMode) => void; notify: (message: string) => void; onAddLink: () => void; onVinLookup: () => void; onEditVehicle: () => void;
+function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs, maintenance, openViewer, setAddMode, notify, onAddLink, onVinLookup, onEditVehicle, onEditAppearance }: {
+  snapshot: AppSnapshot; activeVehicle?: Vehicle; setActiveVehicleId: (id: string) => void; activeDocs: DocumentRecord[]; maintenance: AppSnapshot['maintenanceRecords']; openViewer: (record: DocumentRecord) => void; setAddMode: (mode: AddMode) => void; notify: (message: string) => void; onAddLink: () => void; onVinLookup: () => void; onEditVehicle: () => void; onEditAppearance: () => void;
 }) {
   if (!activeVehicle) return null;
   const insurance = activeDocs.filter((record) => record.category === 'insurance').sort((a, b) => b.issueDate.localeCompare(a.issueDate))[0];
@@ -384,13 +421,15 @@ function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs,
   return <>
     <PageHeader eyebrow="Your garage" title="Vehicles" action={<button className="scan-button" onClick={() => setAddMode('vehicle')}><Plus />Add vehicle</button>} />
     <VehicleSwitcher vehicles={snapshot.vehicles} activeId={activeVehicle.id} setActiveId={setActiveVehicleId} onAdd={() => setAddMode('vehicle')} />
-    <section className="vehicle-identity"><div className="vehicle-hero-icon"><CarFront /></div><div><p className="eyebrow">{activeVehicle.nickname}</p><h2>{activeVehicle.year} {activeVehicle.make} {activeVehicle.model}</h2><p>{activeVehicle.trim || 'Trim not recorded'} · {activeVehicle.currentOdometer?.toLocaleString() || 'Mileage needed'} miles</p></div><button className="vin-identity-button" onClick={onVinLookup} disabled={!activeVehicle.vin}><ShieldCheck />{activeVehicle.vinLookup ? 'Review VIN check' : 'Check VIN'}</button></section>
-    <section className="detail-section"><div className="section-heading"><div><p className="eyebrow">At a glance</p><h2>Quick facts</h2></div><div className="quick-fact-actions"><button className="text-button" onClick={onEditVehicle}>Edit vehicle<Pencil /></button>{activeVehicle.vin && <button className="text-button" onClick={onVinLookup}>{activeVehicle.vinLookup ? 'Checked with NHTSA' : 'Check VIN & recalls'}<ChevronRight /></button>}</div></div><div className="facts-grid">
+    <section className="vehicle-identity"><VehicleAvatar vehicle={activeVehicle} className="vehicle-hero-icon" /><div><p className="eyebrow">{activeVehicle.nickname}</p><h2>{activeVehicle.year} {activeVehicle.make} {activeVehicle.model}</h2><p>{activeVehicle.trim || 'Trim not recorded'} · {activeVehicle.currentOdometer?.toLocaleString() || 'Mileage needed'} miles</p></div><button className="vin-identity-button" onClick={onVinLookup} disabled={!activeVehicle.vin}><ShieldCheck />{activeVehicle.vinLookup ? 'Review VIN check' : 'Check VIN'}</button></section>
+    <section className="detail-section"><div className="section-heading"><div><p className="eyebrow">At a glance</p><h2>Quick facts</h2></div><div className="quick-fact-actions"><button className="text-button" onClick={onEditAppearance}>Photo & color<Camera /></button><button className="text-button" onClick={onEditVehicle}>Edit vehicle<Pencil /></button>{activeVehicle.vin && <button className="text-button" onClick={onVinLookup}>{activeVehicle.vinLookup ? 'Checked with NHTSA' : 'Check VIN & recalls'}<ChevronRight /></button>}</div></div><div className="facts-grid">
       <Fact label="VIN" value={activeVehicle.vin || 'Not recorded'} action={activeVehicle.vin ? () => copy(activeVehicle.vin!, 'VIN') : undefined} />
+      <Fact label="Color" value={activeVehicle.color ? activeVehicle.color.toUpperCase() : 'Not selected'} />
       <Fact label="License plate" value={activeVehicle.licensePlate || 'Not recorded'} action={activeVehicle.licensePlate ? () => copy(activeVehicle.licensePlate!, 'Plate') : undefined} />
       <Fact label="Registration" value={registration ? niceDate(registration.expirationDate) : 'Not added'} />
       <Fact label="Insurance" value={insurance ? niceDate(insurance.expirationDate) : 'Not added'} />
     </div></section>
+    {activeVehicle.vinLookup && <VinDataPanel lookup={activeVehicle.vinLookup} />}
     {insurance && <><button className="insurance-wallet" onClick={() => openViewer(insurance)}><span className="insurance-icon"><ShieldCheck /></span><span><small>Current insurance card</small><strong>{String(insurance.fields.carrier || insurance.title)}</strong><em>{maskPolicy(insurance.fields.policyNumber)}</em></span><span className={`status-badge ${deadlineState(insurance.expirationDate).tone}`}>{deadlineState(insurance.expirationDate).label}</span><ChevronRight /></button><InsuranceCoverage record={insurance} /></>}
     <div className="vehicle-columns">
       <section><div className="section-heading"><div><p className="eyebrow">Document wallet</p><h2>Important documents</h2></div><button className="text-button" onClick={() => setAddMode('document')}>{insurance ? <><Plus />Add record</> : <><Camera />Add insurance card</>}</button></div>
@@ -407,6 +446,12 @@ function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs,
 
 function Fact({ label, value, action }: { label: string; value: string; action?: () => void }) {
   return <div className="fact"><small>{label}</small><strong>{value}</strong>{action && <button onClick={action} aria-label={`Copy ${label}`}><Copy /></button>}</div>;
+}
+
+function VinDataPanel({ lookup }: { lookup: NonNullable<Vehicle['vinLookup']> }) {
+  const items = Object.entries({ Manufacturer: lookup.details.manufacturer, 'Vehicle type': lookup.details.vehicleType, 'Body style': lookup.details.bodyClass, Fuel: lookup.details.fuelType, Engine: lookup.details.engine, 'Drive type': lookup.details.driveType, 'Assembly plant': lookup.details.plant }).filter(([, value]) => Boolean(value));
+  if (!items.length) return null;
+  return <section className="vin-data-panel"><div className="section-heading"><div><p className="eyebrow">VIN-sourced vehicle data</p><h2>Decoded vehicle details</h2></div><span className="vin-source-badge"><ShieldCheck />NHTSA</span></div><div className="vin-data-grid">{items.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div><p>Retrieved {niceDate(lookup.checkedAt.slice(0, 10))} from {lookup.source}. These details remain editable in your vehicle record.</p></section>;
 }
 
 function InsuranceCoverage({ record }: { record: DocumentRecord }) {

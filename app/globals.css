@@ -64,6 +64,9 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
 .vehicle-pill { flex: 0 0 auto; min-height: 58px; border: 1px solid var(--line); border-radius: 16px; padding: 7px 15px 7px 8px; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.5); text-align: left; cursor: pointer; }
 .vehicle-pill.selected { border-color: #9bb9b0; background: var(--surface); box-shadow: 0 5px 20px rgba(28,44,39,.07); }
 .vehicle-dot { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--forest-soft); color: var(--forest); }
+.vehicle-avatar { overflow: hidden; flex: 0 0 auto; color: white; }
+.vehicle-avatar svg { width: 48%; height: 48%; }
+.vehicle-avatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .vehicle-pill strong, .vehicle-pill small { display: block; white-space: nowrap; }
 .vehicle-pill strong { font-size: 14px; }
 .vehicle-pill small { margin-top: 3px; color: var(--muted); font-size: 12px; }
@@ -151,12 +154,24 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
 .vehicle-identity p:not(.eyebrow) { margin: 7px 0 0; color: var(--muted); font-size: 14px; }
 .vehicle-hero-icon { width: 68px; height: 68px; display: grid; place-items: center; border-radius: 20px; background: var(--forest); color: white; }
 .vehicle-hero-icon svg { width: 31px; height: 31px; }
+.vehicle-color-control { display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 10px; align-items: center; }
+.vehicle-color-control input[type='color'] { width: 52px; height: 46px; border: 1px solid var(--input); border-radius: 12px; padding: 4px; background: var(--surface); cursor: pointer; }
 .more-button { width: 44px; height: 44px; border: 0; border-radius: 13px; background: var(--muted); color: white; cursor: pointer; }
 .vin-identity-button { min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #a9bfd7; border-radius: 10px; padding: 0 13px; background: white; color: var(--forest); font-size: 13px; font-weight: 750; cursor: pointer; }
 .vin-identity-button:disabled { opacity: .55; cursor: not-allowed; }
 .vin-identity-button svg { width: 18px; }
 .detail-section, .resource-section { margin-top: 34px; }
 .facts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.vin-data-panel { margin-top: 12px; border: 1px solid #c8dce9; border-radius: 20px; padding: 20px; background: #f3f8fc; }
+.vin-data-panel .section-heading { margin-bottom: 14px; }
+.vin-source-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 7px 10px; background: #dcecf7; color: #175c8f; font-size: 12px; font-weight: 750; }
+.vin-source-badge svg { width: 15px; }
+.vin-data-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.vin-data-grid > div { min-width: 0; border: 1px solid #d7e4ed; border-radius: 13px; padding: 12px; background: rgba(255,255,255,.72); }
+.vin-data-grid small, .vin-data-grid strong { display: block; }
+.vin-data-grid small { color: var(--muted); font-size: 11px; }
+.vin-data-grid strong { margin-top: 5px; font-size: 13px; }
+.vin-data-panel > p { margin: 13px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .fact { min-width: 0; min-height: 90px; position: relative; border: 1px solid var(--line); border-radius: 17px; padding: 16px; background: rgba(255,254,251,.72); }
 .fact small, .fact strong { display: block; }
 .fact small { color: var(--muted); font-size: 11px; }
@@ -459,6 +474,7 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
   .content-grid { grid-template-columns: 1fr; }
   .side-stack { grid-template-columns: 1fr 1fr; }
   .facts-grid { grid-template-columns: repeat(2, 1fr); }
+  .vin-data-grid { grid-template-columns: repeat(2, 1fr); }
   .vehicle-columns { grid-template-columns: 1fr; }
   .resource-grid { grid-template-columns: 1fr 1fr; }
 }
@@ -500,7 +516,9 @@ h3 { margin: 0; font-size: 16px; line-height: 1.3; }
   .vehicle-identity { grid-template-columns: 58px minmax(0,1fr) 44px; padding: 16px; gap: 13px; }
   .vehicle-hero-icon { width: 57px; height: 57px; border-radius: 17px; }
   .vehicle-identity h2 { font-size: 25px; }
+  .vin-data-panel { padding: 16px; }
   .vin-identity-button { width: 44px; padding: 0; font-size: 0; }
+  .detail-section > .section-heading { align-items: flex-start; flex-direction: column; gap: 7px; }
   .quick-fact-actions { width: 100%; justify-content: flex-start; }
   .insurance-wallet { grid-template-columns: 46px minmax(0,1fr) 20px; }
   .insurance-wallet .status-badge { display: none; }
