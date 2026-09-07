@@ -25,7 +25,7 @@ type FormSubmitEvent = { preventDefault(): void; currentTarget: HTMLFormElement 
 type RestoreCandidate = { snapshot: AppSnapshot; exportedAt?: string; fileName: string };
 
 const emptySnapshot: AppSnapshot = { vehicles: [], documents: [], maintenanceRecords: [], resourceLinks: [] };
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.4.1';
 const resourceLinks = [
   { label: 'Virginia DMV registration', organization: 'Virginia DMV', url: 'https://www.dmv.virginia.gov/vehicles/registration' },
   { label: 'Virginia emissions information', organization: 'Virginia DEQ', url: 'https://www.deq.virginia.gov/air-energy/vehicle-emissions-air-check' },
@@ -111,6 +111,7 @@ function VehicleAppearanceDialog({ vehicle, onClose, onSaved }: { vehicle: Vehic
   const save = async () => {
     setBusy(true); setError('');
     try {
+      if (!CSS.supports('color', color.trim())) throw new Error('Enter a standard color name such as blue or gray, or use a hex color such as #2F6DB2.');
       const assets = file ? await prepareDocumentImages(file, vehicle.id) : [];
       const primaryImageId = assets.find((asset) => asset.role === 'document')?.id || vehicle.primaryImageId;
       const thumbnailImageId = assets.find((asset) => asset.role === 'thumbnail')?.id || vehicle.thumbnailImageId;
@@ -120,7 +121,7 @@ function VehicleAppearanceDialog({ vehicle, onClose, onSaved }: { vehicle: Vehic
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'The vehicle appearance could not be saved.'); }
     finally { setBusy(false); }
   };
-  return <Dialog open onOpenChange={(open) => !open && onClose()}><DialogContent className="app-dialog max-sm:!translate-x-0 max-sm:!translate-y-0" showCloseButton={false}><DialogHeader><div className="dialog-heading"><div><DialogTitle>Vehicle appearance</DialogTitle><DialogDescription>Choose a color and optionally add a photo of your vehicle. Both remain on this device.</DialogDescription></div><button className="dialog-close" onClick={onClose} aria-label="Close"><X /></button></div></DialogHeader><div className="app-form"><label>Vehicle color<div className="vehicle-color-control"><input aria-label="Vehicle color" type="color" value={color} onChange={(event) => setColor(event.target.value)} /><Input value={color.toUpperCase()} onChange={(event) => /^#[0-9A-Fa-f]{6}$/.test(event.target.value) && setColor(event.target.value)} /></div></label><label className="photo-input"><span className="photo-icon"><Camera /></span><span><strong>{file ? file.name : vehicle.primaryImageId ? 'Replace vehicle photo' : 'Take or choose your vehicle photo'}</strong><small>{file ? 'New vehicle photo ready to save' : 'Use a clear exterior photo—the app will use it as the vehicle icon.'}</small></span><Input type="file" accept="image/*" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<Button className="submit-control" onClick={() => void save()} disabled={busy}>{busy ? 'Saving…' : 'Save appearance'}<Check /></Button></div></DialogContent></Dialog>;
+  return <Dialog open onOpenChange={(open) => !open && onClose()}><DialogContent className="app-dialog max-sm:!translate-x-0 max-sm:!translate-y-0" showCloseButton={false}><DialogHeader><div className="dialog-heading"><div><DialogTitle>Vehicle appearance</DialogTitle><DialogDescription>Choose a color and optionally add a photo of your vehicle. Both remain on this device.</DialogDescription></div><button className="dialog-close" onClick={onClose} aria-label="Close"><X /></button></div></DialogHeader><div className="app-form"><label>Vehicle color <span>blue, gray, or a hex color</span><div className="vehicle-color-control"><input aria-label="Choose vehicle color" type="color" value={/^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#2f6db2'} onChange={(event) => setColor(event.target.value)} /><Input value={color} placeholder="blue or gray" onChange={(event) => setColor(event.target.value)} /></div></label><label className="photo-input"><span className="photo-icon"><Camera /></span><span><strong>{file ? file.name : vehicle.primaryImageId ? 'Replace vehicle photo' : 'Take or choose your vehicle photo'}</strong><small>{file ? 'New vehicle photo ready to save' : 'Use a clear exterior photo—the app will use it as the vehicle icon.'}</small></span><Input type="file" accept="image/*" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<Button className="submit-control" onClick={() => void save()} disabled={busy}>{busy ? 'Saving…' : 'Save appearance'}<Check /></Button></div></DialogContent></Dialog>;
 }
 
 
@@ -424,7 +425,7 @@ function VehiclesView({ snapshot, activeVehicle, setActiveVehicleId, activeDocs,
     <section className="vehicle-identity"><VehicleAvatar vehicle={activeVehicle} className="vehicle-hero-icon" /><div><p className="eyebrow">{activeVehicle.nickname}</p><h2>{activeVehicle.year} {activeVehicle.make} {activeVehicle.model}</h2><p>{activeVehicle.trim || 'Trim not recorded'} · {activeVehicle.currentOdometer?.toLocaleString() || 'Mileage needed'} miles</p></div><button className="vin-identity-button" onClick={onVinLookup} disabled={!activeVehicle.vin}><ShieldCheck />{activeVehicle.vinLookup ? 'Review VIN check' : 'Check VIN'}</button></section>
     <section className="detail-section"><div className="section-heading"><div><p className="eyebrow">At a glance</p><h2>Quick facts</h2></div><div className="quick-fact-actions"><button className="text-button" onClick={onEditAppearance}>Photo & color<Camera /></button><button className="text-button" onClick={onEditVehicle}>Edit vehicle<Pencil /></button>{activeVehicle.vin && <button className="text-button" onClick={onVinLookup}>{activeVehicle.vinLookup ? 'Checked with NHTSA' : 'Check VIN & recalls'}<ChevronRight /></button>}</div></div><div className="facts-grid">
       <Fact label="VIN" value={activeVehicle.vin || 'Not recorded'} action={activeVehicle.vin ? () => copy(activeVehicle.vin!, 'VIN') : undefined} />
-      <Fact label="Color" value={activeVehicle.color ? activeVehicle.color.toUpperCase() : 'Not selected'} />
+      <Fact label="Color" value={activeVehicle.color || 'Not selected'} />
       <Fact label="License plate" value={activeVehicle.licensePlate || 'Not recorded'} action={activeVehicle.licensePlate ? () => copy(activeVehicle.licensePlate!, 'Plate') : undefined} />
       <Fact label="Registration" value={registration ? niceDate(registration.expirationDate) : 'Not added'} />
       <Fact label="Insurance" value={insurance ? niceDate(insurance.expirationDate) : 'Not added'} />
