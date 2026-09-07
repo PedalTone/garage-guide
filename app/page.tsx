@@ -25,7 +25,7 @@ type FormSubmitEvent = { preventDefault(): void; currentTarget: HTMLFormElement 
 type RestoreCandidate = { snapshot: AppSnapshot; exportedAt?: string; fileName: string };
 
 const emptySnapshot: AppSnapshot = { vehicles: [], documents: [], maintenanceRecords: [], resourceLinks: [] };
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.4.2';
 const resourceLinks = [
   { label: 'Virginia DMV registration', organization: 'Virginia DMV', url: 'https://www.dmv.virginia.gov/vehicles/registration' },
   { label: 'Virginia emissions information', organization: 'Virginia DEQ', url: 'https://www.deq.virginia.gov/air-energy/vehicle-emissions-air-check' },
